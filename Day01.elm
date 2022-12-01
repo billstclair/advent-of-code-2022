@@ -23,7 +23,23 @@ import Html.Events exposing (onInput)
 -}
 solve : String -> String
 solve input =
-    input
+    let
+        elves =
+            String.split "\n\n" input
+
+        byElf =
+            List.map (String.split "\n") elves
+
+        itemsPerElf =
+            List.map
+                (List.map (Maybe.withDefault 0 << String.toInt))
+                byElf
+
+        calories =
+            List.map (List.foldl (\i res -> i + res) 0) itemsPerElf
+    in
+    List.foldl (\i res -> max i res) 0 calories
+        |> String.fromInt
 
 
 main =
