@@ -86,7 +86,7 @@ view model =
             , text "GitHub: "
             , let
                 url =
-                    "https://github.com/billstclair/advent-of-code-2022"
+                    "https://github.com/billstclair/advent-of-code-2022/blob/main/Day01.elm"
               in
               link url url
             ]
