@@ -14,7 +14,7 @@
 module Template exposing (main)
 
 import Browser
-import Html exposing (Attribute, Html, a, div, p, text, textarea)
+import Html exposing (Attribute, Html, a, div, h2, p, text, textarea)
 import Html.Attributes exposing (cols, href, rows, style, target, value)
 import Html.Events exposing (onInput)
 
@@ -64,7 +64,8 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div [ style "margin-left" "3em" ]
-        [ p [] [ text "Paste the input below. The solution will be computed." ]
+        [ h2 [] [ text <| "Advent of Code " ++ special.middleDot ++ " Template" ]
+        , p [] [ text "Paste the input below. The solution will be computed." ]
         , textarea
             [ rows 40
             , cols 80
@@ -72,17 +73,17 @@ view model =
             , onInput Input
             ]
             []
-        , p [] [ b "Solution: " ]
-        , p [] [ text model.output ]
+        , p []
+            [ b "Solution: "
+            , text model.output
+            ]
         , p []
             [ text <| "Copyright " ++ special.copyright ++ " 2022, Bill St. Clair"
             , br
-            , a [ href "https://adventofcode.com" ]
-                [ text "Advent of Code - 2022" ]
+            , link "Advent of Code - 2022" "https://adventofcode.com"
 
-            --, text ": "
-            --, a [ href "https://adventofcode.com/2022/day/1" ]
-            --  [ text "Day 1" ]
+            --, text " - "
+            --, link "Day 1" "https://adventofcode.com/2022/day/1"
             , br
             , text "GitHub: "
             , let

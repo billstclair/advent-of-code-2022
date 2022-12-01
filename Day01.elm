@@ -14,7 +14,7 @@
 module Day01 exposing (main)
 
 import Browser
-import Html exposing (Attribute, Html, a, div, p, text, textarea)
+import Html exposing (Attribute, Html, a, div, h2, p, text, textarea)
 import Html.Attributes exposing (cols, href, rows, style, target, value)
 import Html.Events exposing (onInput)
 
@@ -80,7 +80,9 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div [ style "margin-left" "3em" ]
-        [ p [] [ text "Paste the input below. The solution will be computed." ]
+        [ h2 [] [ text <| "Advent of Code " ++ special.middleDot ++ " Day 1" ]
+        , p [] [ text "Paste the input below. The solution will be computed." ]
+        , p [] [ text "Paste the input below. The solution will be computed." ]
         , textarea
             [ rows 40
             , cols 80
@@ -88,8 +90,10 @@ view model =
             , onInput Input
             ]
             []
-        , p [] [ b "Solution: " ]
-        , p [] [ text model.output ]
+        , p []
+            [ b "Solution: "
+            , text model.output
+            ]
         , p []
             [ text <| "Copyright " ++ special.copyright ++ " 2022, Bill St. Clair"
             , br
