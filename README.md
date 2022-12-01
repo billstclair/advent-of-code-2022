@@ -15,4 +15,6 @@ Or, use Ellie:
 
 The Ellie links make it very easy to cheat. Listen to your conscience.
 
+GitHub: https://github.com/billstclair/advent-of-code-2022
+
 Bill St. Clair, 1 December 2022
