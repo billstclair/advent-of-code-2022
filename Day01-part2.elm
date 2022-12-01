@@ -1,7 +1,7 @@
 ----------------------------------------------------------------
 --
--- Day02.elm
--- Day 2 of the 2022 Advent of Code
+-- Day01-part2.elm
+-- 2022 Advent of Code
 -- https://adventofcode.com/2022/day/2
 -- Copyright (c) 2022 Bill St. Clair <billstclair@gmail.com>
 -- Some rights reserved.
