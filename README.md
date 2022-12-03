@@ -14,6 +14,8 @@ Or, use Ellie:
 * [Day 1, part 2](https://ellie-app.com/kjQLHMvynpZa1)
 * [Day 2](https://ellie-app.com/kknKgsyYXCLa1)
 * [Day 2, part 2](https://ellie-app.com/kkp9LwzCWRza1)
+* [Day 3](https://ellie-app.com/kkKGpnftvKLa1)
+* [Day 3, part 2](https://ellie-app.com/kkKHbNcdRpta1)
 
 The Ellie links make it very easy to cheat. Listen to your conscience.
 
