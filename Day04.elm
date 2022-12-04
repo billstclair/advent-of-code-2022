@@ -34,7 +34,7 @@ part =
 dayStrings =
     { day = "Day 4"
     , aocUrl = "https://adventofcode.com/2022/day/4"
-    , githubUrl = "https://github.com/billstclair/advent-of-code-2022/blob/main/Day03.elm"
+    , githubUrl = "https://github.com/billstclair/advent-of-code-2022/blob/main/Day04.elm"
     }
 
 
