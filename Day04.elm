@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
 --
--- Day03-part2.elm
+-- Day04.elm
 -- 2022 Advent of Code
 -- https://adventofcode.com/2022/day/3#part2
 -- Copyright (c) 2022 Bill St. Clair <billstclair@gmail.com>
@@ -11,7 +11,7 @@
 ----------------------------------------------------------------------
 
 
-module Day03Part2 exposing (main)
+module Day04 exposing (main)
 
 import Browser
 import Html exposing (Attribute, Html, a, div, h2, p, text, textarea)
@@ -24,79 +24,84 @@ import Set exposing (Set)
 {- Customize below here for each puzzle. -}
 
 
+{-| Select part 1 or 2 of the puzzle
+-}
+part : Int
+part =
+    2
+
+
 dayStrings =
-    { day = "Day 3, part 2"
-    , aocUrl = "https://adventofcode.com/2022/day/3#part2"
-    , githubUrl = "https://github.com/billstclair/advent-of-code-2022/blob/main/Day03-part2.elm"
+    { day = "Day 4"
+    , aocUrl = "https://adventofcode.com/2022/day/4"
+    , githubUrl = "https://github.com/billstclair/advent-of-code-2022/blob/main/Day03.elm"
     }
+
+
+type alias Range =
+    { start : Int
+    , end : Int
+    }
+
+
+parseRange : String -> Range
+parseRange string =
+    case String.split "-" string of
+        [ start, end ] ->
+            { start = Maybe.withDefault 0 <| String.toInt start
+            , end = Maybe.withDefault 0 <| String.toInt end
+            }
+
+        _ ->
+            Debug.log ("parseRange " ++ string ++ ", bad range") <| Range 0 0
+
+
+parseLine : String -> ( Range, Range )
+parseLine string =
+    case String.split "," string of
+        [ r1, r2 ] ->
+            ( parseRange r1, parseRange r2 )
+
+        _ ->
+            Debug.log (string ++ ": Not two elves in line") ( Range 0 0, Range 1 1 )
+
+
+fullyContains : ( Range, Range ) -> Bool
+fullyContains ( range1, range2 ) =
+    (range1.start >= range2.start && range1.end <= range2.end)
+        || (range2.start >= range1.start && range2.end <= range1.end)
+
+
+overlaps : ( Range, Range ) -> Bool
+overlaps ( range1, range2 ) =
+    fullyContains ( range1, range2 )
+        || (range1.start >= range2.start && range1.start <= range2.end)
+        || (range1.end >= range2.start && range1.end <= range2.end)
+
+
+predicate : ( Range, Range ) -> Bool
+predicate =
+    if part == 1 then
+        fullyContains
+
+    else
+        overlaps
 
 
 solve : String -> String
 solve input =
     let
-        rucksacks : List String
-        rucksacks =
-            String.split "\n" input
-
-        groupLoop : List String -> List (List String) -> List (List String)
-        groupLoop rucksacksTail res =
-            if List.length rucksacksTail < 3 then
-                List.reverse res
+        folder : ( Range, Range ) -> Int -> Int
+        folder ranges sum =
+            if predicate ranges then
+                sum + 1
 
             else
-                let
-                    newTail =
-                        List.take 3 rucksacksTail
-                in
-                groupLoop (List.drop 3 rucksacksTail) <|
-                    newTail
-                        :: res
-
-        groups : List (List String)
-        groups =
-            groupLoop rucksacks []
-
-        itemsSet : String -> Set Char
-        itemsSet rucksack =
-            String.toList rucksack
-                |> Set.fromList
-
-        itemPriority : Char -> Int
-        itemPriority item =
-            let
-                code =
-                    Char.toCode item
-            in
-            if item >= 'a' && item <= 'z' then
-                1 + code - Char.toCode 'a'
-
-            else
-                27 + code - Char.toCode 'A'
-
-        folder : List String -> Int -> Int
-        folder group total =
-            let
-                sets =
-                    List.map itemsSet group
-
-                item =
-                    (case List.head sets of
-                        Nothing ->
-                            Set.empty
-
-                        Just first ->
-                            List.foldl Set.intersect
-                                first
-                                (List.drop 1 sets)
-                    )
-                        |> Set.toList
-                        |> List.head
-                        |> Maybe.withDefault
-                            (Char.fromCode <| 27 + Char.toCode 'A')
-            in
-            total + itemPriority item
+                sum
     in
-    List.foldl folder 0 groups
+    String.split "\n" input
+        |> List.map parseLine
+        |> List.foldl folder 0
         |> String.fromInt
 
 
