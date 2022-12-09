@@ -21,8 +21,7 @@ Or, use Ellie:
 * [Day 6](https://ellie-app.com/kn5RB6PJwKga1) (change `part` to 1 or 2)
 * [Day 7](https://ellie-app.com/knCKMNXLb39a1) (change `part` to 1 or 2)
 * [Day 8](https://ellie-app.com/kp7VgjXFc3ba1) (change `part` to 1 or 2)
-
-
+* [Day 9](https://ellie-app.com/kpy9kSZDfM5a1) (change `part` to 1 or 2)
 
 The Ellie links make it very easy to cheat. Listen to your conscience.
 

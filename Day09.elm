@@ -11,7 +11,7 @@
 ----------------------------------------------------------------------
 
 
-module Day09 exposing (main)
+module Day09 exposing (..)
 
 import Array exposing (Array)
 import Browser
@@ -20,7 +20,6 @@ import Html exposing (Attribute, Html, a, div, h2, p, text, textarea)
 import Html.Attributes exposing (cols, href, rows, style, target, value)
 import Html.Events exposing (onInput)
 import Set exposing (Set)
-import String.Extra as SE
 
 
 
@@ -29,7 +28,7 @@ import String.Extra as SE
 
 part : Int
 part =
-    1
+    2
 
 
 partSuffix =
@@ -77,6 +76,29 @@ arePointsAdjacent { x, y } p2 =
     (abs (x - p2.x) <= 1) && (abs (y - p2.y) <= 1)
 
 
+moveTailsNearHead : Point -> List Point -> List Point
+moveTailsNearHead head tails =
+    let
+        loop : List Point -> Point -> List Point -> List Point
+        loop rest last res =
+            case rest of
+                [] ->
+                    List.reverse res
+
+                car :: cdr ->
+                    let
+                        newcar =
+                            moveTailNearHead last car
+                    in
+                    if newcar == car then
+                        List.append (List.reverse res) rest
+
+                    else
+                        loop cdr newcar <| newcar :: res
+    in
+    loop tails head []
+
+
 moveTailNearHead : Point -> Point -> Point
 moveTailNearHead head tail =
     if arePointsAdjacent head tail then
@@ -101,15 +123,15 @@ moveTailNearHead head tail =
 
 type alias Bridge =
     { head : Point
-    , tail : Point
+    , tail : List Point
     , tailVisits : Set ( Int, Int )
     }
 
 
-emptyBridge : Bridge
-emptyBridge =
+emptyBridge : Int -> Bridge
+emptyBridge tailLength =
     { head = Point 0 0
-    , tail = Point 0 0
+    , tail = List.repeat tailLength <| Point 0 0
     , tailVisits = Set.empty
     }
 
@@ -121,12 +143,20 @@ moveHead delta bridge =
             addPoints bridge.head delta
 
         tail =
-            moveTailNearHead head bridge.tail
+            moveTailsNearHead head bridge.tail
+
+        visits =
+            case List.drop (List.length tail - 1) tail of
+                [ end ] ->
+                    Set.insert (pointToTuple end) bridge.tailVisits
+
+                _ ->
+                    bridge.tailVisits
     in
     { bridge
         | head = head
         , tail = tail
-        , tailVisits = Set.insert (pointToTuple tail) bridge.tailVisits
+        , tailVisits = visits
     }
 
 
@@ -220,7 +250,7 @@ doMoves bridge moves =
 part1 : String -> String
 part1 input =
     parseMoves input
-        |> doMoves emptyBridge
+        |> doMoves (emptyBridge 1)
         |> .tailVisits
         |> Set.size
         |> String.fromInt
@@ -228,7 +258,11 @@ part1 input =
 
 part2 : String -> String
 part2 input =
-    input
+    parseMoves input
+        |> doMoves (emptyBridge 9)
+        |> .tailVisits
+        |> Set.size
+        |> String.fromInt
 
 
 solve : String -> String
