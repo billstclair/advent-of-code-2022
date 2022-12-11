@@ -143,11 +143,11 @@ parseMonkey : String -> Maybe Monkey
 parseMonkey string =
     let
         nextNumber n =
-            if n == 1 then
-                2
+            if n == 0 then
+                1
 
             else
-                1
+                0
     in
     case String.split "\n" string of
         [ number, items, operation, test, ifTrue, ifFalse ] ->
@@ -169,7 +169,6 @@ parseMonkey string =
                         [ _, numbers ] ->
                             String.split "," numbers
                                 |> List.map String.trim
-                                |> Debug.log "numbers"
                                 |> List.map (Maybe.withDefault 0 << String.toInt)
 
                         _ ->
@@ -196,10 +195,191 @@ parseMonkeys string =
         |> List.filterMap parseMonkey
 
 
+doTurn : Monkey -> ( Monkey, Int, Int )
+doTurn monkey =
+    case monkey.items of
+        [] ->
+            -- Never happens
+            ( monkey, -1, 0 )
+
+        item :: rest ->
+            let
+                i =
+                    log "  inspect" item
+
+                level =
+                    log "    level" <|
+                        doOperation monkey.operation i
+
+                level2 =
+                    log "    level2" <|
+                        level
+                            // 3
+
+                throwTo =
+                    if modBy monkey.divisibleBy level2 == 0 then
+                        log "    divisible, throw to"
+                            monkey.ifTrue
+
+                    else
+                        log "    not divisible, throw to"
+                            monkey.ifFalse
+            in
+            ( { monkey | items = rest }
+            , throwTo
+            , level2
+            )
+
+
+turnStep : ( List Monkey, List Monkey ) -> ( List Monkey, List Monkey )
+turnStep ( toMove, moved ) =
+    let
+        pushItem : Int -> Int -> Monkey -> Monkey
+        pushItem number item monkey =
+            if monkey.number == number then
+                { monkey | items = monkey.items ++ [ item ] }
+
+            else
+                monkey
+    in
+    case toMove of
+        [] ->
+            ( toMove, moved )
+
+        monkey :: rest ->
+            if monkey.items == [] then
+                ( rest, monkey :: moved )
+
+            else
+                let
+                    ( newMonkey, number, item ) =
+                        doTurn monkey
+
+                    ( newToMove, newMoved ) =
+                        ( List.map (pushItem number item) rest
+                        , List.map (pushItem number item) moved
+                        )
+                in
+                if newMonkey.items == [] then
+                    ( newToMove
+                    , newMonkey :: newMoved
+                    )
+
+                else
+                    ( newMonkey :: newToMove
+                    , newMoved
+                    )
+
+
+{-| monkey.number -> count
+-}
+type alias FlingDict =
+    Dict Int Int
+
+
+type alias State =
+    { flingDict : FlingDict
+    , lastToMoveCount : Int
+    , toMove : List Monkey
+    , moved : List Monkey
+    }
+
+
+stateStep : State -> State
+stateStep state =
+    let
+        moveCount =
+            List.length state.toMove
+
+        flingDict =
+            if state.lastToMoveCount == moveCount then
+                state.flingDict
+
+            else
+                case state.toMove of
+                    monkey :: _ ->
+                        let
+                            i =
+                                log "Monkey" monkey.number
+
+                            itemCount =
+                                List.length monkey.items
+
+                            oldCnt =
+                                case Dict.get monkey.number state.flingDict of
+                                    Nothing ->
+                                        0
+
+                                    Just cnt ->
+                                        cnt
+                        in
+                        Dict.insert monkey.number
+                            (oldCnt + itemCount)
+                            state.flingDict
+
+                    _ ->
+                        state.flingDict
+
+        ( toMove, moved ) =
+            turnStep ( state.toMove, state.moved )
+    in
+    { state
+        | flingDict = flingDict
+        , lastToMoveCount = moveCount
+        , toMove = toMove
+        , moved = moved
+    }
+
+
+stateLoop : Int -> State -> State
+stateLoop rounds state =
+    case state.toMove of
+        [] ->
+            if rounds <= 1 then
+                state
+
+            else
+                stateLoop (rounds - 1)
+                    { state
+                        | lastToMoveCount = 0
+                        , toMove = List.reverse state.moved
+                        , moved = []
+                    }
+
+        _ ->
+            stateLoop rounds <| stateStep state
+
+
+log : String -> x -> x
+log s x =
+    --Debug.log s x
+    x
+
+
 part1 : String -> String
 part1 input =
     parseMonkeys input
-        |> Debug.toString
+        |> Debug.log "monkeys"
+        |> (\monkeys ->
+                let
+                    state =
+                        stateLoop 20
+                            { flingDict = Dict.empty
+                            , lastToMoveCount = 0
+                            , toMove = monkeys
+                            , moved = []
+                            }
+                in
+                state.flingDict
+                    |> Dict.toList
+                    |> Debug.log "flingDict"
+                    |> List.map Tuple.second
+                    |> List.sortWith (\x y -> compare y x)
+                    |> List.take 2
+                    |> Debug.log "top two"
+                    |> List.foldl (*) 1
+                    |> String.fromInt
+           )
 
 
 part2 : String -> String
