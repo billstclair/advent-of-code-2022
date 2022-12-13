@@ -29,7 +29,7 @@ import Set exposing (Set)
 
 part : Int
 part =
-    1
+    2
 
 
 partSuffix =
@@ -78,9 +78,24 @@ get ( row, col ) board =
                     v
 
 
+aChar : Char
+aChar =
+    'a'
+
+
+aCode : Int
+aCode =
+    Char.toCode aChar
+
+
+startChar : Char
+startChar =
+    'S'
+
+
 startCode : Int
 startCode =
-    Char.toCode 'S'
+    Char.toCode startChar
 
 
 goalCode : Int
@@ -250,18 +265,19 @@ findStart board =
         |> findLoop
 
 
-parseLine : String -> Row
-parseLine line =
+parseLine : (Char -> Char) -> String -> Row
+parseLine mapper line =
     String.toList line
+        |> List.map mapper
         |> List.indexedMap (\i c -> ( i, Char.toCode c ))
         |> Dict.fromList
 
 
-parseBoard : String -> Board
-parseBoard string =
+parseBoard : (Char -> Char) -> String -> Board
+parseBoard mapper string =
     String.split "\n" string
         |> LE.filterNot ((==) "")
-        |> List.indexedMap (\i l -> ( i, parseLine l ))
+        |> List.indexedMap (\i l -> ( i, parseLine mapper l ))
         |> Dict.fromList
 
 
@@ -270,7 +286,7 @@ part1 input =
     let
         board =
             log "board" <|
-                parseBoard input
+                parseBoard identity input
     in
     case findStart board of
         Nothing ->
@@ -285,9 +301,51 @@ part1 input =
                     String.fromInt pathLength
 
 
+startToA : Char -> Char
+startToA char =
+    if char == startChar then
+        aChar
+
+    else
+        char
+
+
 part2 : String -> String
 part2 input =
-    input
+    let
+        board =
+            log "board" <|
+                parseBoard startToA input
+
+        rowLoop : List ( Int, Row ) -> Int -> Int
+        rowLoop rows minLength =
+            case rows of
+                [] ->
+                    minLength
+
+                ( rownum, row ) :: rest ->
+                    rowLoop rest <| loop rownum (Dict.toList row) minLength
+
+        loop : Int -> List Pair -> Int -> Int
+        loop rownum pairs minLength =
+            case pairs of
+                [] ->
+                    minLength
+
+                ( colnum, val ) :: rest ->
+                    if val /= aCode then
+                        loop rownum rest minLength
+
+                    else
+                        case findGoal ( rownum, colnum ) board of
+                            Nothing ->
+                                loop rownum rest minLength
+
+                            Just pathLength ->
+                                loop rownum rest <| min minLength pathLength
+    in
+    rowLoop (Dict.toList board) 100000
+        |> String.fromInt
 
 
 solve : String -> String
