@@ -88,11 +88,16 @@ goalCode =
     Char.toCode 'E'
 
 
+yCode : Int
+yCode =
+    Char.toCode 'y'
+
+
 type Classification
     = IsGoal
     | AlreadyVisited
     | TooHigh
-    | Visited
+    | NewPair
 
 
 tryOne : Int -> Pair -> Visited -> Board -> Classification
@@ -103,21 +108,29 @@ tryOne val pair visited board =
     else
         let
             pairVal =
-                get pair board
+                log "      pairVal" <|
+                    get pair board
         in
         if pairVal == goalCode then
-            IsGoal
+            if val >= yCode then
+                IsGoal
 
-        else if val < pairVal - 1 then
+            else
+                TooHigh
+
+        else if val /= startCode && val < pairVal - 1 then
             TooHigh
 
         else
-            Visited
+            NewPair
 
 
 tryNeighbors : Int -> Pair -> Visited -> Board -> ( Bool, Visited, Visited )
 tryNeighbors val ( row, col ) visited board =
     let
+        v =
+            log "val" val
+
         neighbors =
             [ ( row - 1, col )
             , ( row + 1, col )
@@ -125,17 +138,26 @@ tryNeighbors val ( row, col ) visited board =
             , ( row, col + 1 )
             ]
                 |> List.filter (\pair -> get pair board /= 0)
+                |> log "neighbors"
 
         loop : List Pair -> Visited -> Visited -> ( Bool, Set Pair, Visited )
         loop ns res vis =
+            let
+                vs =
+                    log "vis" vis
+            in
             case ns of
                 [] ->
                     ( False, res, vis )
 
                 neighbor :: rest ->
                     let
+                        n =
+                            log "  neighbor" neighbor
+
                         classification =
-                            tryOne val neighbor vis board
+                            log "  tryOne" <|
+                                tryOne val neighbor vis board
                     in
                     case classification of
                         IsGoal ->
@@ -147,7 +169,7 @@ tryNeighbors val ( row, col ) visited board =
                         TooHigh ->
                             loop rest res vis
 
-                        Visited ->
+                        NewPair ->
                             loop rest
                                 (Set.insert neighbor res)
                             <|
@@ -168,14 +190,23 @@ findGoal start board =
 
                     else
                         loop (pathLength + 1)
-                            (Set.toList neighbors)
+                            (log ("loop " ++ (String.fromInt <| pathLength + 1))
+                                (Set.toList neighbors)
+                            )
                             Set.empty
                             visited
 
                 pair :: rest ->
                     let
+                        p =
+                            log "  pair" pair
+
+                        v =
+                            log "  visited" visited
+
                         ( found, newNeighbors, newVisited ) =
-                            tryNeighbors (get pair board) pair visited board
+                            log "tryNeighbors" <|
+                                tryNeighbors (get pair board) pair visited board
                     in
                     if found then
                         Just pathLength
@@ -186,7 +217,7 @@ findGoal start board =
                             (Set.union newNeighbors neighbors)
                             newVisited
     in
-    loop 1 [ start ] Set.empty Set.empty
+    loop 1 [ start ] Set.empty <| Set.fromList [ start ]
 
 
 findStart : Board -> Maybe Pair
@@ -229,6 +260,7 @@ parseLine line =
 parseBoard : String -> Board
 parseBoard string =
     String.split "\n" string
+        |> LE.filterNot ((==) "")
         |> List.indexedMap (\i l -> ( i, parseLine l ))
         |> Dict.fromList
 
@@ -237,16 +269,17 @@ part1 : String -> String
 part1 input =
     let
         board =
-            parseBoard input
+            log "board" <|
+                parseBoard input
     in
     case findStart board of
         Nothing ->
-            "Can't find 'S'"
+            "Can't find start: 'S'"
 
         Just start ->
             case findGoal start board of
                 Nothing ->
-                    "Can't find 'E'"
+                    "Can't find end: 'E' = " ++ String.fromInt goalCode
 
                 Just pathLength ->
                     String.fromInt pathLength
