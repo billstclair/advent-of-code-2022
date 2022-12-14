@@ -26,6 +26,7 @@ Or, use Ellie:
 * I failed to solve Day 11, part 1
 * [Day 12](https://ellie-app.com/krd3vjT6YsPa1) (change `part` to 1 or 2)
 * [Day 13](https://ellie-app.com/krj5GkFBw5ta1) (change `part` to 1 or 2)
+* [Day 14](https://ellie-app.com/krGRBp6PFjxa1) (change `part` to 1 or 2)
 
 The Ellie links make it very easy to cheat. Listen to your conscience.
 
