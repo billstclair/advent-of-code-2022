@@ -109,38 +109,60 @@ addSensor { at, beacon } points =
                         ps2
 
                     else
-                        loop (mid + 1) <| adjoiner mid ps2
+                        let
+                            midp1 =
+                                mid + 1
+
+                            ps3 =
+                                adjoiner mid ps2
+                        in
+                        loop midp1 ps3
             in
             loop from ps
 
-        rangey : Int -> Set Point -> Set Point
-        rangey x ps =
-            let
-                deltay =
-                    abs (distance - x)
+        rangex : Int -> Set Point -> Set Point
+        rangex y ps =
+            if y /= theY then
+                ps
 
-                addOne : Int -> Set Point -> Set Point
-                addOne y ps2 =
-                    let
-                        p =
-                            ( x, y )
-                    in
-                    if p /= beacon then
-                        Set.insert p ps2
+            else
+                let
+                    deltax =
+                        distance - abs (aty - y)
 
-                    else
-                        ps2
-            in
-            range (aty - deltay) (aty + deltay) addOne ps
+                    addOne : Int -> Set Point -> Set Point
+                    addOne x ps2 =
+                        let
+                            p =
+                                ( x, y )
+                        in
+                        if p /= beacon then
+                            let
+                                s =
+                                    ( p, ( at, beacon ), ( distance, deltax ) )
+
+                                i =
+                                    log "addOne" s
+                            in
+                            Set.insert p ps2
+
+                        else
+                            ps2
+                in
+                range (atx - deltax) (atx + deltax) addOne ps
     in
-    range (atx - distance) (atx + distance) rangey points
+    if aty - distance <= theY && aty + distance >= theY then
+        range (aty - distance) (aty + distance) rangex points
+
+    else
+        points
 
 
 {-| Simplistic, I know, but it works
 -}
 parseSensor : String -> Maybe Sensor
 parseSensor string =
-    case log "parseSensor" <| String.split "=" string of
+    case String.split "=" string of
         [ _, sxsp, sysp, bxsp, bys ] ->
             case String.split "," sxsp of
                 sxs :: _ ->
@@ -181,9 +203,25 @@ parseSensor string =
             Nothing
 
 
+exampleY : Int
+exampleY =
+    10
+
+
+realY : Int
+realY =
+    2000000
+
+
+theY : Int
+theY =
+    --exampleY
+    realY
+
+
 filter : Point -> Bool
 filter ( x, y ) =
-    y == 10
+    y == theY
 
 
 part1 : String -> String
@@ -192,7 +230,7 @@ part1 input =
         |> List.filterMap parseSensor
         |> log "sensors"
         |> List.foldl addSensor Set.empty
-        |> Set.filter filter
+        --|> Set.filter filter
         |> log "filtered"
         |> Set.size
         |> String.fromInt
@@ -214,8 +252,8 @@ solve input =
 
 log : String -> x -> x
 log s x =
-    --x
-    Debug.log s x
+    --Debug.log s x
+    x
 
 
 {-| Fixed code follows. Customize above here for each puzzle.
