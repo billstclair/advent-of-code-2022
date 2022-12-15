@@ -70,6 +70,99 @@ manhattanDistance ( x1, y1 ) ( x2, y2 ) =
     abs (x1 - x2) + abs (y1 - y2)
 
 
+type alias Range =
+    List ( Int, Int )
+
+
+emptyRange : Range
+emptyRange =
+    []
+
+
+insertIntoRange : ( Int, Int ) -> Range -> Range
+insertIntoRange interval range =
+    let
+        ( min, max ) =
+            interval
+
+        insert : Range -> Range -> Range
+        insert r res =
+            case r of
+                [] ->
+                    List.reverse <| interval :: res
+
+                int :: rest ->
+                    let
+                        ( start, end ) =
+                            int
+                    in
+                    if min >= start then
+                        if min <= end then
+                            List.append (List.reverse res) <| finishInsert r []
+
+                        else
+                            insert rest (int :: res)
+
+                    else if max < start then
+                        List.append (int :: res) r
+
+                    else if max <= end then
+                        List.append (( min, end ) :: res) rest
+
+                    else
+                        List.append (List.reverse res) <|
+                            finishInsert (( min, end ) :: rest) []
+
+        finishInsert : Range -> Range -> Range
+        finishInsert r res =
+            case r of
+                [] ->
+                    -- can't happen
+                    List.reverse res
+
+                int :: rest ->
+                    let
+                        ( start, end ) =
+                            int
+                    in
+                    if max <= end then
+                        List.append (List.reverse res) r
+
+                    else
+                        case rest of
+                            [] ->
+                                List.reverse <| ( start, max ) :: res
+
+                            _ ->
+                                finishInsert rest <| int :: res
+
+        removeOverlaps : Range -> Range -> Range
+        removeOverlaps res r =
+            case r of
+                ( s1, e1 ) :: ( s2, e2 ) :: rest ->
+                    if e1 >= s2 then
+                        removeOverlaps res (( s1, e2 ) :: rest)
+
+                    else
+                        removeOverlaps (( s1, e1 ) :: res) <| ( s2, e2 ) :: rest
+
+                _ ->
+                    List.append (List.reverse res) r
+    in
+    insert range []
+        |> removeOverlaps []
+
+
+intervalCount : ( Int, Int ) -> Int
+intervalCount ( start, end ) =
+    1 + end - start
+
+
+rangeCount : Range -> Int
+rangeCount range =
+    List.foldl (\interval sum -> intervalCount interval + sum) 0 range
+
+
 type alias Sensor =
     { at : Point
     , beacon : Point
@@ -91,71 +184,114 @@ maybePoint mx my =
             Nothing
 
 
-addSensor : Sensor -> Set Point -> Set Point
-addSensor { at, beacon } points =
+type alias Map =
+    Dict Int Range
+
+
+emptyMap : Map
+emptyMap =
+    Dict.empty
+
+
+addSensor : Sensor -> Map -> Map
+addSensor sensor map =
     let
+        { at, beacon } =
+            sensor
+                |> log "addSensor sensor"
+
         ( atx, aty ) =
             at
+
+        ( beaconx, beacony ) =
+            beacon
 
         distance =
             manhattanDistance at beacon
 
-        range : Int -> Int -> (Int -> Set Point -> Set Point) -> Set Point -> Set Point
-        range from to adjoiner ps =
+        range : Int -> Int -> (Int -> Map -> Map) -> Map -> Map
+        range from to adjoiner mp =
             let
-                loop : Int -> Set Point -> Set Point
-                loop mid ps2 =
+                loop : Int -> Map -> Map
+                loop mid m2 =
                     if mid > to then
-                        ps2
+                        m2
 
                     else
                         let
                             midp1 =
                                 mid + 1
 
-                            ps3 =
-                                adjoiner mid ps2
+                            m3 =
+                                adjoiner mid m2
                         in
-                        loop midp1 ps3
+                        loop midp1 m3
             in
-            loop from ps
+            loop from mp
 
-        rangex : Int -> Set Point -> Set Point
-        rangex y ps =
-            if y /= theY then
-                ps
+        rangex : Int -> Map -> Map
+        rangex y mp =
+            let
+                deltax =
+                    distance - abs (y - aty)
 
-            else
-                let
-                    deltax =
-                        distance - abs (aty - y)
+                rng =
+                    case Dict.get y mp of
+                        Nothing ->
+                            emptyRange
 
-                    addOne : Int -> Set Point -> Set Point
-                    addOne x ps2 =
+                        Just rng2 ->
+                            rng2
+
+                newRange =
+                    let
+                        from =
+                            atx - deltax
+
+                        to =
+                            atx + deltax
+                    in
+                    if from > beaconx || to < beaconx then
+                        insertIntoRange ( from, to ) rng
+
+                    else
                         let
-                            p =
-                                ( x, y )
-                        in
-                        if p /= beacon then
-                            let
-                                s =
-                                    ( p, ( at, beacon ), ( distance, deltax ) )
+                            from1 =
+                                if from == beacony then
+                                    from + 1
 
-                                i =
-                                    log "addOne" s
-                            in
-                            Set.insert p ps2
+                                else
+                                    from
+
+                            to1 =
+                                beacony - 1
+
+                            from2 =
+                                beacony + 1
+
+                            to2 =
+                                if to == beacony then
+                                    to - 1
+
+                                else
+                                    to
+
+                            rng2 =
+                                if from1 <= to1 then
+                                    insertIntoRange ( from1, to1 ) rng
+
+                                else
+                                    rng
+                        in
+                        if from2 <= to2 then
+                            insertIntoRange ( from2, to2 ) rng2
 
                         else
-                            ps2
-                in
-                range (atx - deltax) (atx + deltax) addOne ps
+                            rng2
+            in
+            Dict.insert y newRange mp
     in
-    if aty - distance <= theY && aty + distance >= theY then
-        range (aty - distance) (aty + distance) rangex points
-
-    else
-        points
+    range (aty - distance) (aty + distance) rangex map
 
 
 {-| Simplistic, I know, but it works
@@ -228,11 +364,11 @@ part1 : String -> String
 part1 input =
     String.split "\n" input
         |> List.filterMap parseSensor
-        |> log "sensors"
-        |> List.foldl addSensor Set.empty
-        --|> Set.filter filter
+        |> List.foldl addSensor emptyMap
+        |> Dict.get theY
+        |> Maybe.withDefault emptyRange
         |> log "filtered"
-        |> Set.size
+        |> rangeCount
         |> String.fromInt
 
 
@@ -252,8 +388,8 @@ solve input =
 
 log : String -> x -> x
 log s x =
-    --Debug.log s x
-    x
+    --x
+    Debug.log s x
 
 
 {-| Fixed code follows. Customize above here for each puzzle.
