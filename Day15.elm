@@ -16,9 +16,9 @@ module Day15 exposing (..)
 import Array exposing (Array)
 import Browser
 import Dict exposing (Dict)
-import Html exposing (Attribute, Html, a, code, div, h2, p, pre, span, text, textarea)
-import Html.Attributes exposing (cols, href, rows, style, target, value)
-import Html.Events exposing (onInput)
+import Html exposing (Attribute, Html, a, code, div, h2, input, p, pre, span, text, textarea)
+import Html.Attributes exposing (checked, cols, href, rows, style, target, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Set exposing (Set)
 
 
@@ -26,21 +26,27 @@ import Set exposing (Set)
 {- Customize below here for each puzzle. -}
 
 
-part : Int
-part =
+defaultIsReal : Bool
+defaultIsReal =
+    False
+
+
+defaultPart : Int
+defaultPart =
     1
 
 
-partSuffix =
-    if part == 0 then
+partSuffix : Model -> String
+partSuffix model =
+    if model.part == 0 then
         ""
 
     else
-        ", part " ++ String.fromInt part
+        ", part " ++ String.fromInt model.part
 
 
 dayStrings =
-    { day = "Day 15" ++ partSuffix
+    { day = "Day 15"
     , aocUrl = "https://adventofcode.com/2022/day/15"
     , githubUrl = "https://github.com/billstclair/advent-of-code-2022/blob/main/Day15.elm"
     }
@@ -98,20 +104,19 @@ insertIntoRange interval range =
                     in
                     if min >= start then
                         if min <= end then
-                            List.append (List.reverse res) <| finishInsert r []
+                            finishInsert r res
 
                         else
                             insert rest (int :: res)
 
                     else if max < start then
-                        List.append (int :: res) r
+                        List.append (List.reverse <| ( min, max ) :: res) r
 
                     else if max <= end then
-                        List.append (( min, end ) :: res) rest
+                        List.append (List.reverse <| ( min, end ) :: res) rest
 
                     else
-                        List.append (List.reverse res) <|
-                            finishInsert (( min, end ) :: rest) []
+                        finishInsert (( min, end ) :: rest) res
 
         finishInsert : Range -> Range -> Range
         finishInsert r res =
@@ -133,8 +138,8 @@ insertIntoRange interval range =
                             [] ->
                                 List.reverse <| ( start, max ) :: res
 
-                            _ ->
-                                finishInsert rest <| int :: res
+                            ( _, end2 ) :: rest2 ->
+                                finishInsert (( start, end2 ) :: rest2) res
 
         removeOverlaps : Range -> Range -> Range
         removeOverlaps res r =
@@ -193,8 +198,8 @@ emptyMap =
     Dict.empty
 
 
-addSensor : Sensor -> Map -> Map
-addSensor sensor map =
+addSensor : Model -> Sensor -> Map -> Map
+addSensor model sensor map =
     let
         { at, beacon } =
             sensor
@@ -231,82 +236,93 @@ addSensor sensor map =
 
         rangex : Int -> Map -> Map
         rangex y mp =
-            let
-                dolog =
-                    y == theY
+            if model.part == 1 && y /= theY model then
+                mp
 
-                deltax =
-                    distance - abs (y - aty)
+            else
+                let
+                    dolog =
+                        model.part == 1
 
-                rng =
-                    case Dict.get y mp of
-                        Nothing ->
-                            emptyRange
+                    deltax =
+                        distance - abs (y - aty)
 
-                        Just rng2 ->
-                            rng2
+                    rng =
+                        maybeLog dolog "  rng" <|
+                            case Dict.get y mp of
+                                Nothing ->
+                                    emptyRange
 
-                newRange =
-                    let
-                        from =
-                            atx - deltax
+                                Just rng2 ->
+                                    rng2
 
-                        to =
-                            atx + deltax
-
-                        trash =
-                            maybeLog dolog "  rangex" ( from, to )
-                    in
-                    if from > beaconx || to < beaconx then
-                        insertIntoRange ( from, to ) rng
-                            |> maybeLog dolog "    insertIntoRange"
-
-                    else
+                    newRange =
                         let
-                            from1 =
-                                if from == beacony then
-                                    from + 1
+                            from =
+                                atx - deltax
 
-                                else
-                                    from
+                            to =
+                                atx + deltax
 
-                            to1 =
-                                beacony - 1
-
-                            from2 =
-                                beacony + 1
-
-                            to2 =
-                                if to == beacony then
-                                    to - 1
-
-                                else
-                                    to
-
-                            rng2 =
-                                if from1 <= to1 then
-                                    let
-                                        t2 =
-                                            maybeLog dolog "    i1" ( from1, to1 )
-                                    in
-                                    insertIntoRange ( from1, to1 ) rng
-                                        |> maybeLog dolog "      insertIntoRange"
-
-                                else
-                                    rng
+                            int =
+                                maybeLog dolog "  rangex" ( from, to )
                         in
-                        if from2 <= to2 then
-                            let
-                                t3 =
-                                    maybeLog dolog "    i2" ( from2, to2 )
-                            in
-                            insertIntoRange ( from2, to2 ) rng2
-                                |> maybeLog dolog "      insertIntoRange"
+                        if y /= beacony then
+                            insertIntoRange int rng
+                                |> maybeLog dolog "    insertIntoRange"
+
+                        else if from > beaconx || to < beaconx then
+                            insertIntoRange int rng
+                                |> maybeLog dolog "    insertIntoRange"
 
                         else
-                            rng2
-            in
-            Dict.insert y newRange mp
+                            let
+                                from1 =
+                                    if from == beaconx then
+                                        from + 1
+
+                                    else
+                                        from
+
+                                to1 =
+                                    beaconx - 1
+
+                                from2 =
+                                    beaconx + 1
+
+                                to2 =
+                                    if to == beaconx then
+                                        to - 1
+
+                                    else
+                                        to
+
+                                rng2 =
+                                    if from1 <= to1 then
+                                        let
+                                            i2 =
+                                                ( from1, to1 )
+                                                    |> maybeLog dolog "    i1"
+                                        in
+                                        insertIntoRange i2 rng
+                                            |> maybeLog dolog "      insertIntoRange"
+
+                                    else
+                                        rng
+                            in
+                            if from2 <= to2 then
+                                let
+                                    i3 =
+                                        ( from2, to2 )
+                                            |> maybeLog dolog "    i2"
+                                in
+                                insertIntoRange i3 rng2
+                                    |> maybeLog dolog "      insertIntoRange"
+
+                            else
+                                rng2
+                in
+                Dict.insert y newRange mp
     in
     range (aty - distance) (aty + distance) rangex map
 
@@ -366,41 +382,39 @@ realY =
     2000000
 
 
-theY : Int
-theY =
-    --exampleY
-    realY
+theY : Model -> Int
+theY { isReal } =
+    if isReal then
+        realY
+
+    else
+        exampleY
 
 
-filter : Point -> Bool
-filter ( x, y ) =
-    y == theY
-
-
-part1 : String -> String
-part1 input =
+part1 : Model -> String -> String
+part1 model input =
     String.split "\n" input
         |> List.filterMap parseSensor
-        |> List.foldl addSensor emptyMap
-        |> Dict.get theY
+        |> List.foldl (addSensor model) emptyMap
+        |> Dict.get (theY model)
         |> Maybe.withDefault emptyRange
         |> log "filtered"
         |> rangeCount
         |> String.fromInt
 
 
-part2 : String -> String
-part2 input =
+part2 : Model -> String -> String
+part2 model input =
     input
 
 
-solve : String -> String
-solve input =
-    if part == 1 then
-        part1 input
+solve : Model -> String -> String
+solve model input =
+    if model.part == 1 then
+        part1 model input
 
     else
-        part2 input
+        part2 model input
 
 
 log : String -> x -> x
@@ -431,17 +445,23 @@ main =
 type alias Model =
     { input : String
     , output : String
+    , part : Int
+    , isReal : Bool
     }
 
 
 type Msg
     = Input String
+    | TogglePart
+    | ToggleReal
 
 
 init : Model
 init =
     { input = ""
     , output = ""
+    , part = defaultPart
+    , isReal = defaultIsReal
     }
 
 
@@ -451,8 +471,46 @@ update msg model =
         Input input ->
             { model
                 | input = input
-                , output = solve input
+                , output = solve model input
             }
+
+        TogglePart ->
+            let
+                m =
+                    { model
+                        | part =
+                            if model.part == 1 then
+                                2
+
+                            else
+                                1
+                    }
+            in
+            { m | output = solve m model.input }
+
+        ToggleReal ->
+            let
+                m =
+                    { model
+                        | isReal = not model.isReal
+                    }
+            in
+            { m | output = solve m model.input }
+
+
+checkBox : Msg -> Bool -> String -> Html Msg
+checkBox msg isChecked label =
+    span
+        [ onClick msg
+        , style "cursor" "default"
+        ]
+        [ input
+            [ type_ "checkbox"
+            , checked isChecked
+            ]
+            []
+        , b label
+        ]
 
 
 view : Model -> Html Msg
@@ -464,6 +522,15 @@ view model =
                     ++ special.middleDot
                     ++ " "
                     ++ dayStrings.day
+                    ++ partSuffix model
+            ]
+        , p []
+            [ checkBox TogglePart (model.part == 1) "part 1" ]
+        , p []
+            [ checkBox ToggleReal model.isReal "real, not example"
+            , br
+            , b "theY: "
+            , text (String.fromInt <| theY model)
             ]
         , p [] [ text "Paste the input below. The solution will be computed." ]
         , textarea
