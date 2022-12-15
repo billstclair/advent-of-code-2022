@@ -33,7 +33,7 @@ defaultIsReal =
 
 defaultPart : Int
 defaultPart =
-    1
+    2
 
 
 partSuffix : Model -> String
@@ -54,6 +54,11 @@ dayStrings =
 
 type alias Point =
     ( Int, Int )
+
+
+pointToString : Point -> String
+pointToString ( x, y ) =
+    "( " ++ String.fromInt x ++ ", " ++ String.fromInt y ++ " )"
 
 
 px : Point -> Int
@@ -198,9 +203,80 @@ emptyMap =
     Dict.empty
 
 
+findBeacons : Model -> Map -> List Point
+findBeacons model map =
+    let
+        ( minCoord, maxCoord ) =
+            theRange model
+
+        loop : Int -> List Point -> List Point
+        loop y res =
+            if y > maxCoord then
+                res
+
+            else
+                let
+                    point : Int -> Point
+                    point x =
+                        ( x, y )
+                in
+                case Dict.get y map of
+                    Nothing ->
+                        let
+                            ps2 =
+                                List.range minCoord maxCoord
+                                    |> List.map point
+
+                            res2 =
+                                List.append res ps2
+                        in
+                        loop (y + 1) res2
+
+                    Just range ->
+                        let
+                            inner : Int -> Range -> List Point -> List Point
+                            inner x rng res2 =
+                                case rng of
+                                    [] ->
+                                        let
+                                            ps2 =
+                                                List.range x maxCoord
+                                                    |> List.map point
+                                        in
+                                        List.append res2 ps2
+
+                                    ( min, max ) :: rest ->
+                                        if x < min then
+                                            let
+                                                ps2 =
+                                                    List.range x (min - 1)
+                                                        |> List.map point
+                                            in
+                                            inner (max + 1) rest <| List.append res2 ps2
+
+                                        else if x <= max then
+                                            inner (max + 1) rest res2
+
+                                        else
+                                            inner x rest res2
+
+                            ps =
+                                inner 0 range []
+
+                            res3 =
+                                res ++ ps
+                        in
+                        loop (y + 1) res3
+    in
+    loop 0 []
+
+
 addSensor : Model -> Sensor -> Map -> Map
 addSensor model sensor map =
     let
+        ( minCoord, maxCoord ) =
+            theRange model
+
         { at, beacon } =
             sensor
                 |> log "addSensor sensor"
@@ -236,13 +312,20 @@ addSensor model sensor map =
 
         rangex : Int -> Map -> Map
         rangex y mp =
-            if model.part == 1 && y /= theY model then
+            let
+                isPart1 =
+                    model.part == 1
+            in
+            if isPart1 && y /= theY model then
+                mp
+
+            else if not isPart1 && (y < minCoord || y > maxCoord) then
                 mp
 
             else
                 let
                     dolog =
-                        model.part == 1
+                        isPart1
 
                     deltax =
                         distance - abs (y - aty)
@@ -256,18 +339,27 @@ addSensor model sensor map =
                                 Just rng2 ->
                                     rng2
 
+                    limitCoord : Int -> Int
+                    limitCoord c =
+                        if isPart1 then
+                            c
+
+                        else
+                            max minCoord <|
+                                min maxCoord c
+
                     newRange =
                         let
                             from =
-                                atx - deltax
+                                limitCoord <| atx - deltax
 
                             to =
-                                atx + deltax
+                                limitCoord <| atx + deltax
 
                             int =
                                 maybeLog dolog "  rangex" ( from, to )
                         in
-                        if y /= beacony then
+                        if not isPart1 || y /= beacony then
                             insertIntoRange int rng
                                 |> maybeLog dolog "    insertIntoRange"
 
@@ -391,6 +483,15 @@ theY { isReal } =
         exampleY
 
 
+theRange : Model -> Point
+theRange { isReal } =
+    if isReal then
+        ( 0, 4000000 )
+
+    else
+        ( 0, 20 )
+
+
 part1 : Model -> String -> String
 part1 model input =
     String.split "\n" input
@@ -405,7 +506,11 @@ part1 model input =
 
 part2 : Model -> String -> String
 part2 model input =
-    input
+    String.split "\n" input
+        |> List.filterMap parseSensor
+        |> List.foldl (addSensor model) emptyMap
+        |> findBeacons model
+        |> Debug.toString
 
 
 solve : Model -> String -> String
@@ -525,13 +630,21 @@ view model =
                     ++ partSuffix model
             ]
         , p []
-            [ checkBox TogglePart (model.part == 1) "part 1" ]
-        , p []
-            [ checkBox ToggleReal model.isReal "real, not example"
+            [ checkBox TogglePart (model.part == 1) "part 1"
             , br
-            , b "theY: "
-            , text (String.fromInt <| theY model)
+            , checkBox ToggleReal model.isReal "real, not example"
             ]
+        , if model.part == 1 then
+            p []
+                [ b "theY: "
+                , text (String.fromInt <| theY model)
+                ]
+
+          else
+            p []
+                [ b "theRange: "
+                , text (pointToString <| theRange model)
+                ]
         , p [] [ text "Paste the input below. The solution will be computed." ]
         , textarea
             [ rows 40
