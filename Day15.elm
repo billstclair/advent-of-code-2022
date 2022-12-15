@@ -19,7 +19,6 @@ import Dict exposing (Dict)
 import Html exposing (Attribute, Html, a, code, div, h2, input, p, pre, span, text, textarea)
 import Html.Attributes exposing (checked, cols, href, rows, style, target, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Set exposing (Set)
 
 
 
@@ -205,70 +204,74 @@ emptyMap =
 
 findBeacons : Model -> Map -> List Point
 findBeacons model map =
-    let
-        ( minCoord, maxCoord ) =
-            theRange model
+    if map == emptyMap then
+        []
 
-        loop : Int -> List Point -> List Point
-        loop y res =
-            if y > maxCoord then
-                res
+    else
+        let
+            ( minCoord, maxCoord ) =
+                theRange model
 
-            else
-                let
-                    point : Int -> Point
-                    point x =
-                        ( x, y )
-                in
-                case Dict.get y map of
-                    Nothing ->
-                        let
-                            ps2 =
-                                List.range minCoord maxCoord
-                                    |> List.map point
+            loop : Int -> List Point -> List Point
+            loop y res =
+                if y > maxCoord then
+                    res
 
-                            res2 =
-                                List.append res ps2
-                        in
-                        loop (y + 1) res2
+                else
+                    let
+                        point : Int -> Point
+                        point x =
+                            ( x, y )
+                    in
+                    case Dict.get y map of
+                        Nothing ->
+                            let
+                                ps2 =
+                                    List.range minCoord maxCoord
+                                        |> List.map point
 
-                    Just range ->
-                        let
-                            inner : Int -> Range -> List Point -> List Point
-                            inner x rng res2 =
-                                case rng of
-                                    [] ->
-                                        let
-                                            ps2 =
-                                                List.range x maxCoord
-                                                    |> List.map point
-                                        in
-                                        List.append res2 ps2
+                                res2 =
+                                    List.append res ps2
+                            in
+                            loop (y + 1) res2
 
-                                    ( min, max ) :: rest ->
-                                        if x < min then
+                        Just range ->
+                            let
+                                inner : Int -> Range -> List Point -> List Point
+                                inner x rng res2 =
+                                    case rng of
+                                        [] ->
                                             let
                                                 ps2 =
-                                                    List.range x (min - 1)
+                                                    List.range x maxCoord
                                                         |> List.map point
                                             in
-                                            inner (max + 1) rest <| List.append res2 ps2
+                                            List.append res2 ps2
 
-                                        else if x <= max then
-                                            inner (max + 1) rest res2
+                                        ( min, max ) :: rest ->
+                                            if x < min then
+                                                let
+                                                    ps2 =
+                                                        List.range x (min - 1)
+                                                            |> List.map point
+                                                in
+                                                inner (max + 1) rest <| List.append res2 ps2
 
-                                        else
-                                            inner x rest res2
+                                            else if x <= max then
+                                                inner (max + 1) rest res2
 
-                            ps =
-                                inner 0 range []
+                                            else
+                                                inner x rest res2
 
-                            res3 =
-                                res ++ ps
-                        in
-                        loop (y + 1) res3
-    in
-    loop 0 []
+                                ps =
+                                    inner 0 range []
+
+                                res3 =
+                                    res ++ ps
+                            in
+                            loop (y + 1) res3
+        in
+        loop 0 []
 
 
 addSensor : Model -> Sensor -> Map -> Map
@@ -442,7 +445,8 @@ parseSensor string =
                                             maybePoint
                                                 (String.toInt bxs)
                                             <|
-                                                String.toInt bys
+                                                String.toInt <|
+                                                    String.trim bys
                                     in
                                     case ( msp, mbp ) of
                                         ( Just sp, Just bp ) ->
@@ -504,13 +508,23 @@ part1 model input =
         |> String.fromInt
 
 
+tuningFrequency : Point -> Int
+tuningFrequency ( x, y ) =
+    x * 4000000 + y
+
+
 part2 : Model -> String -> String
 part2 model input =
     String.split "\n" input
         |> List.filterMap parseSensor
         |> List.foldl (addSensor model) emptyMap
         |> findBeacons model
-        |> Debug.toString
+        |> log "beacons"
+        |> List.map tuningFrequency
+        |> List.map String.fromInt
+        |> List.intersperse ", "
+        |> List.foldr (++) ""
+        |> (\x -> "[ " ++ x ++ " ]")
 
 
 solve : Model -> String -> String
