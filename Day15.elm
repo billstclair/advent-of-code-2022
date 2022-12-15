@@ -232,6 +232,9 @@ addSensor sensor map =
         rangex : Int -> Map -> Map
         rangex y mp =
             let
+                dolog =
+                    y == theY
+
                 deltax =
                     distance - abs (y - aty)
 
@@ -250,9 +253,13 @@ addSensor sensor map =
 
                         to =
                             atx + deltax
+
+                        trash =
+                            maybeLog dolog "  rangex" ( from, to )
                     in
                     if from > beaconx || to < beaconx then
                         insertIntoRange ( from, to ) rng
+                            |> maybeLog dolog "    insertIntoRange"
 
                     else
                         let
@@ -278,13 +285,23 @@ addSensor sensor map =
 
                             rng2 =
                                 if from1 <= to1 then
+                                    let
+                                        t2 =
+                                            maybeLog dolog "    i1" ( from1, to1 )
+                                    in
                                     insertIntoRange ( from1, to1 ) rng
+                                        |> maybeLog dolog "      insertIntoRange"
 
                                 else
                                     rng
                         in
                         if from2 <= to2 then
+                            let
+                                t3 =
+                                    maybeLog dolog "    i2" ( from2, to2 )
+                            in
                             insertIntoRange ( from2, to2 ) rng2
+                                |> maybeLog dolog "      insertIntoRange"
 
                         else
                             rng2
@@ -390,6 +407,15 @@ log : String -> x -> x
 log s x =
     --x
     Debug.log s x
+
+
+maybeLog : Bool -> String -> x -> x
+maybeLog bool s x =
+    if bool then
+        log s x
+
+    else
+        x
 
 
 {-| Fixed code follows. Customize above here for each puzzle.
